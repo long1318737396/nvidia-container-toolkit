@@ -30,6 +30,7 @@ const (
 	RuntimeModeLegacy = RuntimeMode("legacy")
 	RuntimeModeCSV    = RuntimeMode("csv")
 	RuntimeModeCDI    = RuntimeMode("cdi")
+	RuntimeModeJitCDI = RuntimeMode("jit-cdi")
 )
 
 // ResolveAutoMode determines the correct mode for the platform if set to "auto"
@@ -57,9 +58,9 @@ func resolveMode(logger logger.Interface, mode string, image image.CUDA, propert
 
 	switch nvinfo.ResolvePlatform() {
 	case info.PlatformNVML, info.PlatformWSL:
-		return RuntimeModeLegacy
+		return RuntimeModeJitCDI
 	case info.PlatformTegra:
 		return RuntimeModeCSV
 	}
-	return RuntimeModeLegacy
+	return RuntimeModeJitCDI
 }
