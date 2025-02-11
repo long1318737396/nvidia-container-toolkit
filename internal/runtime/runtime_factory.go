@@ -105,13 +105,13 @@ func newSpecModifier(logger logger.Interface, cfg *config.Config, ociSpec oci.Sp
 	return modifiers, nil
 }
 
-func newModeModifier(logger logger.Interface, mode string, cfg *config.Config, ociSpec oci.Spec, image image.CUDA) (oci.SpecModifier, error) {
+func newModeModifier(logger logger.Interface, mode info.RuntimeMode, cfg *config.Config, ociSpec oci.Spec, image image.CUDA) (oci.SpecModifier, error) {
 	switch mode {
-	case "legacy":
+	case info.RuntimeModeLegacy:
 		return modifier.NewStableRuntimeModifier(logger, cfg.NVIDIAContainerRuntimeHookConfig.Path), nil
-	case "csv":
+	case info.RuntimeModeCSV:
 		return modifier.NewCSVModifier(logger, cfg, image)
-	case "cdi":
+	case info.RuntimeModeCDI:
 		return modifier.NewCDIModifier(logger, cfg, ociSpec)
 	}
 
@@ -119,12 +119,12 @@ func newModeModifier(logger logger.Interface, mode string, cfg *config.Config, o
 }
 
 // supportedModifierTypes returns the modifiers supported for a specific runtime mode.
-func supportedModifierTypes(mode string) []string {
+func supportedModifierTypes(mode info.RuntimeMode) []string {
 	switch mode {
-	case "cdi":
+	case info.RuntimeModeCDI:
 		// For CDI mode we make no additional modifications.
 		return []string{"nvidia-hook-remover", "mode"}
-	case "csv":
+	case info.RuntimeModeCSV:
 		// For CSV mode we support mode and feature-gated modification.
 		return []string{"nvidia-hook-remover", "mode", "feature-gated"}
 	default:
