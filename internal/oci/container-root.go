@@ -18,6 +18,7 @@
 package oci
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +28,48 @@ import (
 
 // A ContainerRoot represents the root directory of a container's filesystem.
 type ContainerRoot string
+
+// CreateLdsoconfdFile creates a file at /etc/ld.so.conf.d/ in the specified container root.
+// The file is created at /etc/ld.so.conf.d/{{ .pattern }} using `CreateTemp` and
+// contains the specified directories on each line.
+func (r ContainerRoot) CreateLdsoconfdFile(pattern string, dirs ...string) error {
+	if len(dirs) == 0 {
+		return nil
+	}
+
+	ldsoconfdDir, err := r.Resolve("/etc/ld.so.conf.d")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(ldsoconfdDir, 0755); err != nil {
+		return fmt.Errorf("failed to create ld.so.conf.d: %w", err)
+	}
+
+	configFile, err := os.CreateTemp(ldsoconfdDir, pattern)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %w", err)
+	}
+	defer configFile.Close()
+
+	added := make(map[string]bool)
+	for _, dir := range dirs {
+		if added[dir] {
+			continue
+		}
+		_, err = configFile.WriteString(fmt.Sprintf("%s\n", dir))
+		if err != nil {
+			return fmt.Errorf("failed to update config file: %w", err)
+		}
+		added[dir] = true
+	}
+
+	// The created file needs to be world readable for the cases where the container is run as a non-root user.
+	if err := configFile.Chmod(0644); err != nil {
+		return fmt.Errorf("failed to chmod config file: %w", err)
+	}
+
+	return nil
+}
 
 // GlobFiles matches the specified pattern in the container root.
 // The files that match must be regular files. Symlinks and directories are ignored.
