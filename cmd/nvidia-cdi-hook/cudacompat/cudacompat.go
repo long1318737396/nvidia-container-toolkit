@@ -103,12 +103,12 @@ func (m command) run(_ *cli.Context, cfg *options) error {
 		return fmt.Errorf("failed to load container state: %w", err)
 	}
 
-	containerRootDir, err := s.GetContainerRoot()
+	containerRootDirPath, err := s.GetContainerRootDirPath()
 	if err != nil {
 		return fmt.Errorf("failed to determined container root: %w", err)
 	}
 
-	containerForwardCompatDir, err := m.getContainerForwardCompatDir(containerRoot(containerRootDir), cfg.hostDriverVersion)
+	containerForwardCompatDir, err := m.getContainerForwardCompatDir(containerRoot(containerRootDirPath), cfg.hostDriverVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get container forward compat directory: %w", err)
 	}
@@ -116,7 +116,7 @@ func (m command) run(_ *cli.Context, cfg *options) error {
 		return nil
 	}
 
-	return m.createLdsoconfdFile(containerRoot(containerRootDir), cudaCompatLdsoconfdFilenamePattern, containerForwardCompatDir)
+	return m.createLdsoconfdFile(containerRoot(containerRootDirPath), cudaCompatLdsoconfdFilenamePattern, containerForwardCompatDir)
 }
 
 func (m command) getContainerForwardCompatDir(containerRoot containerRoot, hostDriverVersion string) (string, error) {
