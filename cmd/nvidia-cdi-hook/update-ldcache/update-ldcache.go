@@ -27,6 +27,7 @@ import (
 	"github.com/NVIDIA/nvidia-container-toolkit/internal/config"
 	"github.com/NVIDIA/nvidia-container-toolkit/internal/logger"
 	"github.com/NVIDIA/nvidia-container-toolkit/internal/oci"
+	safeexec "github.com/NVIDIA/nvidia-container-toolkit/internal/safe-exec"
 )
 
 const (
@@ -39,6 +40,7 @@ const (
 )
 
 type command struct {
+	safeexec.Execer
 	logger logger.Interface
 }
 
@@ -52,6 +54,7 @@ type options struct {
 func NewCommand(logger logger.Interface) *cli.Command {
 	c := command{
 		logger: logger,
+		Execer: safeexec.New(logger),
 	}
 	return c.build()
 }
@@ -141,7 +144,7 @@ func (m command) run(c *cli.Context, cfg *options) error {
 		args = append(args, folders...)
 	}
 
-	return m.SafeExec(ldconfigPath, args, nil)
+	return m.Exec(ldconfigPath, args, nil)
 }
 
 // resolveLDConfigPath determines the LDConfig path to use for the system.
