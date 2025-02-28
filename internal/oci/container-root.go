@@ -20,6 +20,7 @@ package oci
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/moby/sys/symlink"
 )
@@ -74,4 +75,17 @@ func (r ContainerRoot) HasPath(path string) bool {
 func (r ContainerRoot) Resolve(path string) (string, error) {
 	absolute := filepath.Clean(filepath.Join(string(r), path))
 	return symlink.FollowSymlinkInScope(absolute, string(r))
+}
+
+// ToContainerPath converts the specified path to a path in the container.
+// Relative paths and absolute paths that are in the container root are returned as is.
+func (r ContainerRoot) ToContainerPath(path string) string {
+	if !filepath.IsAbs(path) {
+		return path
+	}
+	if !strings.HasPrefix(path, string(r)) {
+		return path
+	}
+
+	return strings.TrimPrefix(path, string(r))
 }

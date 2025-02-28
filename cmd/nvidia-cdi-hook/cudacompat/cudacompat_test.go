@@ -24,6 +24,8 @@ import (
 
 	testlog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
+
+	"github.com/NVIDIA/nvidia-container-toolkit/internal/oci"
 )
 
 func TestCompatLibs(t *testing.T) {
@@ -130,7 +132,7 @@ func TestCompatLibs(t *testing.T) {
 			c := command{
 				logger: logger,
 			}
-			containerForwardCompatDir, err := c.getContainerForwardCompatDir(containerRoot(containerRootDir), tc.hostDriverVersion)
+			containerForwardCompatDir, err := c.getContainerForwardCompatDirPathInContainer(oci.ContainerRoot(containerRootDir), tc.hostDriverVersion)
 			require.NoError(t, err)
 			require.EqualValues(t, tc.expectedContainerForwardCompatDir, containerForwardCompatDir)
 		})
@@ -160,7 +162,7 @@ func TestUpdateLdconfig(t *testing.T) {
 			c := command{
 				logger: logger,
 			}
-			err := c.createLdsoconfdFile(containerRoot(containerRootDir), cudaCompatLdsoconfdFilenamePattern, tc.folders...)
+			err := c.createLdsoconfdFile(oci.ContainerRoot(containerRootDir), cudaCompatLdsoconfdFilenamePattern, tc.folders...)
 			require.NoError(t, err)
 
 			matches, err := filepath.Glob(filepath.Join(containerRootDir, "/etc/ld.so.conf.d/00-compat-*.conf"))

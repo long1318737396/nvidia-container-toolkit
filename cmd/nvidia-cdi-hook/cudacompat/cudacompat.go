@@ -108,7 +108,7 @@ func (m command) run(_ *cli.Context, cfg *options) error {
 		return fmt.Errorf("failed to determined container root: %w", err)
 	}
 
-	containerForwardCompatDir, err := m.getContainerForwardCompatDir(containerRoot(containerRootDirPath), cfg.hostDriverVersion)
+	containerForwardCompatDir, err := m.getContainerForwardCompatDirPathInContainer(containerRootDirPath, cfg.hostDriverVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get container forward compat directory: %w", err)
 	}
@@ -116,40 +116,44 @@ func (m command) run(_ *cli.Context, cfg *options) error {
 		return nil
 	}
 
-	return m.createLdsoconfdFile(containerRoot(containerRootDirPath), cudaCompatLdsoconfdFilenamePattern, containerForwardCompatDir)
+	return m.createLdsoconfdFile(containerRootDirPath, cudaCompatLdsoconfdFilenamePattern, containerForwardCompatDir)
 }
 
-func (m command) getContainerForwardCompatDir(containerRoot containerRoot, hostDriverVersion string) (string, error) {
+// getContainerForwardCompatDirPathInContainer returns the path to the directory containing
+// the CUDA Forward Compatibility libraries in the container.
+func (m command) getContainerForwardCompatDirPathInContainer(containerRootDirPath oci.ContainerRoot, hostDriverVersion string) (string, error) {
 	if hostDriverVersion == "" {
 		m.logger.Debugf("Host driver version not specified")
 		return "", nil
 	}
-	if !containerRoot.hasPath(cudaCompatPath) {
+	if !containerRootDirPath.HasPath(cudaCompatPath) {
 		m.logger.Debugf("No CUDA forward compatibility libraries directory in container")
 		return "", nil
 	}
-	if !containerRoot.hasPath("/etc/ld.so.cache") {
+	if !containerRootDirPath.HasPath("/etc/ld.so.cache") {
 		m.logger.Debugf("The container does not have an LDCache")
 		return "", nil
 	}
 
-	libs, err := containerRoot.globFiles(filepath.Join(cudaCompatPath, "libcuda.so.*.*"))
+	cudaForwardCompatLibPaths, err := containerRootDirPath.GlobFiles(filepath.Join(cudaCompatPath, "libcuda.so.*.*"))
 	if err != nil {
 		m.logger.Warningf("Failed to find CUDA compat library: %w", err)
 		return "", nil
 	}
 
-	if len(libs) == 0 {
+	if len(cudaForwardCompatLibPaths) == 0 {
 		m.logger.Debugf("No CUDA forward compatibility libraries container")
 		return "", nil
 	}
 
-	if len(libs) != 1 {
-		m.logger.Warningf("Unexpected number of CUDA compat libraries in container: %v", libs)
+	if len(cudaForwardCompatLibPaths) != 1 {
+		m.logger.Warningf("Unexpected number of CUDA compat libraries in container: %v", cudaForwardCompatLibPaths)
 		return "", nil
 	}
 
-	compatDriverVersion := strings.TrimPrefix(filepath.Base(libs[0]), "libcuda.so.")
+	cudaForwardCompatLibPath := cudaForwardCompatLibPaths[0]
+
+	compatDriverVersion := strings.TrimPrefix(filepath.Base(cudaForwardCompatLibPath), "libcuda.so.")
 	compatMajor, err := extractMajorVersion(compatDriverVersion)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract major version from %q: %v", compatDriverVersion, err)
@@ -165,20 +169,22 @@ func (m command) getContainerForwardCompatDir(containerRoot containerRoot, hostD
 		return "", nil
 	}
 
-	resolvedCompatDir := strings.TrimPrefix(filepath.Dir(libs[0]), string(containerRoot))
-	return resolvedCompatDir, nil
+	cudaForwardCompatLibDirPath := filepath.Dir(cudaForwardCompatLibPath)
+	resolvedCompatDirPathInContainer := containerRootDirPath.ToContainerPath(cudaForwardCompatLibDirPath)
+
+	return resolvedCompatDirPathInContainer, nil
 }
 
 // createLdsoconfdFile creates a file at /etc/ld.so.conf.d/ in the specified root.
 // The file is created at /etc/ld.so.conf.d/{{ .pattern }} using `CreateTemp` and
 // contains the specified directories on each line.
-func (m command) createLdsoconfdFile(in containerRoot, pattern string, dirs ...string) error {
+func (m command) createLdsoconfdFile(in oci.ContainerRoot, pattern string, dirs ...string) error {
 	if len(dirs) == 0 {
 		m.logger.Debugf("No directories to add to /etc/ld.so.conf")
 		return nil
 	}
 
-	ldsoconfdDir, err := in.resolve("/etc/ld.so.conf.d")
+	ldsoconfdDir, err := in.Resolve("/etc/ld.so.conf.d")
 	if err != nil {
 		return err
 	}
