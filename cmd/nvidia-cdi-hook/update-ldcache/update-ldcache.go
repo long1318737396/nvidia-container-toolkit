@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -115,7 +114,7 @@ func (m command) run(c *cli.Context, cfg *options) error {
 		return fmt.Errorf("failed to determined container root: %v", err)
 	}
 
-	ldconfigPath := m.resolveLDConfigPath(cfg.ldconfigPath)
+	ldconfigPath := config.ResolveLDConfigPathOnHost(cfg.ldconfigPath)
 	args := []string{
 		filepath.Base(ldconfigPath),
 		// Run ldconfig in the container root directory on the host.
@@ -145,11 +144,4 @@ func (m command) run(c *cli.Context, cfg *options) error {
 	}
 
 	return m.Exec(ldconfigPath, args, nil)
-}
-
-// resolveLDConfigPath determines the LDConfig path to use for the system.
-// On systems such as Ubuntu where `/sbin/ldconfig` is a wrapper around
-// /sbin/ldconfig.real, the latter is returned.
-func (m command) resolveLDConfigPath(path string) string {
-	return strings.TrimPrefix(config.NormalizeLDConfigPath("@"+path), "@")
 }
