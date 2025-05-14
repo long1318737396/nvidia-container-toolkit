@@ -37,7 +37,7 @@ func TestGenerateSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	driverRoot := filepath.Join(moduleRoot, "testdata", "lookup", "rootfs-1")
-	disableHook := cli.NewStringSlice("enable-cuda-compat")
+	disableHook := cli.NewStringSlice("enable-cuda-compat", "create-symlinks", "update-ldcache")
 
 	logger, _ := testlog.NewNullLogger()
 	testCases := []struct {
@@ -117,7 +117,7 @@ containerEdits:
 `,
 		},
 		{
-			description: "skipHook",
+			description: "disableHooks",
 			options: options{
 				format:       "yaml",
 				mode:         "nvml",
@@ -155,29 +155,6 @@ containerEdits:
     deviceNodes:
         - path: /dev/nvidiactl
           hostPath: {{ .driverRoot }}/dev/nvidiactl
-    hooks:
-        - hookName: createContainer
-          path: /usr/bin/nvidia-cdi-hook
-          args:
-            - nvidia-cdi-hook
-            - create-symlinks
-            - --link
-            - libcuda.so.1::/lib/x86_64-linux-gnu/libcuda.so
-        - hookName: createContainer
-          path: /usr/bin/nvidia-cdi-hook
-          args:
-            - nvidia-cdi-hook
-            - update-ldcache
-            - --folder
-            - /lib/x86_64-linux-gnu
-    mounts:
-        - hostPath: {{ .driverRoot }}/lib/x86_64-linux-gnu/libcuda.so.999.88.77
-          containerPath: /lib/x86_64-linux-gnu/libcuda.so.999.88.77
-          options:
-            - ro
-            - nosuid
-            - nodev
-            - bind
 `,
 		},
 	}
