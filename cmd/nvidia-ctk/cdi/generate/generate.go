@@ -287,7 +287,9 @@ func (m command) generateSpec(opts *options) (spec.Interface, error) {
 
 	if len(opts.disableHooks.Value()) > 0 {
 		for _, hook := range opts.disableHooks.Value() {
-			initOpts = append(initOpts, nvcdi.WithDisabledHook(nvcdi.HookName(hook)))
+			for _, hookName := range nvcdi.NewHookName(hook) {
+				initOpts = append(initOpts, nvcdi.WithDisabledHook(hookName))
+			}
 		}
 	}
 
